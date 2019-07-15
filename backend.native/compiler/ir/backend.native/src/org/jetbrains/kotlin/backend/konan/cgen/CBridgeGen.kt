@@ -584,7 +584,7 @@ private fun IrType.isCEnumType(): Boolean {
             .any { (it.classifierOrNull?.owner as? IrClass)?.fqNameForIrSerialization == FqName("kotlinx.cinterop.CEnum") }
 }
 
-// Make sure external stubs always get proper annotaions.
+// Make sure external stubs always get proper annotations.
 private fun IrDeclaration.hasCCallAnnotation(name: String): Boolean =
         this.annotations.hasAnnotation(cCall.child(Name.identifier(name)))
 
@@ -1590,4 +1590,12 @@ internal fun KotlinStubs.generateSetMemberAt(expression: IrCall, irBuilder: IrBu
             putValueArgument(0, valueToSet)
         }
     }
+}
+
+// TODO: possible optimization: if value is const then we can return corresponding enum entry immediately.
+// TODO: Check how enum lowering will affect IR.
+internal fun KotlinStubs.generateEnumByValue(byValueCall: IrCall, irBuilder: IrBuilderWithScope): IrExpression {
+    val companionObject = byValueCall.dispatchReceiver!!.type.classOrNull!!.owner
+
+    TODO("generate for loop over entries")
 }
