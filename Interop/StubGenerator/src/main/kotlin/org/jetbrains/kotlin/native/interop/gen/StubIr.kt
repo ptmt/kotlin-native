@@ -4,6 +4,7 @@
  */
 package org.jetbrains.kotlin.native.interop.gen
 
+import org.jetbrains.kotlin.konan.library.BitcodeKotlinLibraryLayout
 import org.jetbrains.kotlin.native.interop.indexer.*
 
 interface StubIrElement {
