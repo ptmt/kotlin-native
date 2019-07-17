@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.backend.common.ir.createParameterDeclarations
 import org.jetbrains.kotlin.backend.common.ir.simpleFunctions
 import org.jetbrains.kotlin.backend.common.lower.at
 import org.jetbrains.kotlin.backend.common.lower.irNot
+import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.PrimitiveBinaryType
 import org.jetbrains.kotlin.backend.konan.RuntimeNames
 import org.jetbrains.kotlin.backend.konan.descriptors.getConstantValue
@@ -1594,8 +1595,17 @@ internal fun KotlinStubs.generateSetMemberAt(expression: IrCall, irBuilder: IrBu
 
 // TODO: possible optimization: if value is const then we can return corresponding enum entry immediately.
 // TODO: Check how enum lowering will affect IR.
-internal fun KotlinStubs.generateEnumByValue(byValueCall: IrCall, irBuilder: IrBuilderWithScope): IrExpression {
+internal fun KotlinStubs.generateEnumByValue(context: Context, byValueCall: IrCall, irBuilder: IrBuilderWithScope): IrExpression {
     val companionObject = byValueCall.dispatchReceiver!!.type.classOrNull!!.owner
+    val value = byValueCall.getValueArgument(0)
+
+    val enumClass = companionObject.parentAsClass
+
+    val loweredEnum = context.specialDeclarationsFactory.getLoweredEnum(enumClass)
+
+    with (irBuilder) {
+        val valuesCall = irCall(loweredEnum.valuesGetter)
+    }
 
     TODO("generate for loop over entries")
 }
