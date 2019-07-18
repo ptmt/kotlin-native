@@ -4,9 +4,11 @@
  */
 package org.jetbrains.kotlin.native.interop.gen
 
+import kotlinx.metadata.impl.PackageWriter
 import org.jetbrains.kotlin.native.interop.gen.jvm.InteropConfiguration
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
 import org.jetbrains.kotlin.native.interop.indexer.*
+import org.jetbrains.kotlin.serialization.StringTableImpl
 import java.io.File
 import java.util.*
 
@@ -86,17 +88,39 @@ class StubIrContext(
     }
 }
 
+sealed class StubIrOutput {
+    data class Text(
+            val outKtFile: File,
+            val outCFile: File,
+            val entryPoint: String?
+    ) : StubIrOutput()
+
+    class Metadata() : StubIrOutput()
+}
+
 class StubIrDriver(private val context: StubIrContext) {
-    fun run(outKtFile: File, outCFile: File, entryPoint: String?) {
+    fun run(output: StubIrOutput): Unit {
         val builderResult = StubIrBuilder(context).build()
-        val bridgeBuilderResult = StubIrBridgeBuilder(context, builderResult).build()
-        outKtFile.bufferedWriter().use { ktFile ->
-            File(outCFile.absolutePath).bufferedWriter().use { cFile ->
-                StubIrTextEmitter(
-                        context,
-                        builderResult,
-                        bridgeBuilderResult
-                ).emit(ktFile, cFile, entryPoint)
+        return when (output) {
+            is StubIrOutput.Text -> {
+                val (outKtFile, outCFile, entryPoint) = output
+                val bridgeBuilderResult = StubIrBridgeBuilder(context, builderResult).build()
+                outKtFile.bufferedWriter().use { ktFile ->
+                    File(outCFile.absolutePath).bufferedWriter().use { cFile ->
+                        StubIrTextEmitter(
+                                context,
+                                builderResult,
+                                bridgeBuilderResult
+                        ).emit(ktFile, cFile, entryPoint)
+                    }
+                }
+            }
+            is StubIrOutput.Metadata -> {
+                val kmPackage = StubIrMetadataEmitter(context, builderResult)
+                        .emit()
+                val stringTable = StringTableImpl()
+                val packageWriter = PackageWriter(stringTable)
+                kmPackage.accept(packageWriter)
             }
         }
     }

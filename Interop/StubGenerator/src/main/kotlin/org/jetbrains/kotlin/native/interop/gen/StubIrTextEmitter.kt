@@ -476,7 +476,9 @@ class StubIrTextEmitter(
             val nullability = if (stubType.nullable) "?" else ""
             "$classifier$typeArguments$nullability"
         }
-        is SymbolicStubType -> stubType.name + if (stubType.nullable) "?" else ""
+        is RuntimeStubType -> stubType.name + if (stubType.nullable) "?" else ""
+        is TypeParameterStubType -> stubType.name + if (stubType.nullable) "?" else ""
+        is NestedStubType -> stubType.name + if (stubType.nullable) "?" else ""
     }
 
     private fun renderValueUsage(value: ValueStub): String = when (value) {
