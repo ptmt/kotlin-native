@@ -9,5 +9,7 @@ import org.jetbrains.kotlin.serialization.StringTableImpl
  */
 
 class NativePackageWriter : PackageWriter(StringTableImpl()) {
-
+    fun write(serializerExtension: KonanSerializerExtension) {
+        val message = t.build()
+    }
 }

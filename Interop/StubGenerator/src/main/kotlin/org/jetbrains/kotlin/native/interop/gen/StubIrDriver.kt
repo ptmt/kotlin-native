@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.native.interop.gen
 import kotlinx.metadata.impl.PackageWriter
 import org.jetbrains.kotlin.native.interop.gen.jvm.InteropConfiguration
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
+import org.jetbrains.kotlin.native.interop.gen.metadata.NativePackageWriter
 import org.jetbrains.kotlin.native.interop.indexer.*
 import org.jetbrains.kotlin.serialization.StringTableImpl
 import java.io.File
@@ -118,8 +119,7 @@ class StubIrDriver(private val context: StubIrContext) {
             is StubIrOutput.Metadata -> {
                 val kmPackage = StubIrMetadataEmitter(context, builderResult)
                         .emit()
-                val stringTable = StringTableImpl()
-                val packageWriter = PackageWriter(stringTable)
+                val packageWriter = NativePackageWriter()
                 kmPackage.accept(packageWriter)
             }
         }
