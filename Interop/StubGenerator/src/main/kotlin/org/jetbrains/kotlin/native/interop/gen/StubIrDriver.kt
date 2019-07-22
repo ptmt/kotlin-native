@@ -4,12 +4,11 @@
  */
 package org.jetbrains.kotlin.native.interop.gen
 
-import kotlinx.metadata.impl.PackageWriter
+import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.native.interop.gen.jvm.InteropConfiguration
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
 import org.jetbrains.kotlin.native.interop.gen.metadata.NativePackageWriter
 import org.jetbrains.kotlin.native.interop.indexer.*
-import org.jetbrains.kotlin.serialization.StringTableImpl
 import java.io.File
 import java.util.*
 
@@ -89,22 +88,27 @@ class StubIrContext(
     }
 }
 
-sealed class StubIrOutput {
+sealed class InteropGenerationMode<T: Any> {
+
+    lateinit var output: T
+
     data class Text(
             val outKtFile: File,
             val outCFile: File,
             val entryPoint: String?
-    ) : StubIrOutput()
+    ) : InteropGenerationMode<Unit>()
 
-    class Metadata() : StubIrOutput()
+    class Metadata(
+            val outCFile: File
+    ) : InteropGenerationMode<SerializedMetadata>()
 }
 
-class StubIrDriver(private val context: StubIrContext) {
-    fun run(output: StubIrOutput): Unit {
+class StubIrDriver(private val context: StubIrContext)   {
+    fun <T: Any> run(mode: InteropGenerationMode<T>) {
         val builderResult = StubIrBuilder(context).build()
-        return when (output) {
-            is StubIrOutput.Text -> {
-                val (outKtFile, outCFile, entryPoint) = output
+        when (mode) {
+            is InteropGenerationMode.Text -> {
+                val (outKtFile, outCFile, entryPoint) = mode
                 val bridgeBuilderResult = StubIrBridgeBuilder(context, builderResult).build()
                 outKtFile.bufferedWriter().use { ktFile ->
                     File(outCFile.absolutePath).bufferedWriter().use { cFile ->
@@ -116,11 +120,13 @@ class StubIrDriver(private val context: StubIrContext) {
                     }
                 }
             }
-            is StubIrOutput.Metadata -> {
-                val kmPackage = StubIrMetadataEmitter(context, builderResult)
-                        .emit()
+            is InteropGenerationMode.Metadata -> {
+                val bridgeBuilderResult = StubIrBridgeBuilder(context, builderResult).build()
+                val kmPackage = StubIrMetadataEmitter(context, builderResult, bridgeBuilderResult)
+                        .emit(mode.outCFile)
                 val packageWriter = NativePackageWriter()
                 kmPackage.accept(packageWriter)
+                mode.output = packageWriter.write()
             }
         }
     }

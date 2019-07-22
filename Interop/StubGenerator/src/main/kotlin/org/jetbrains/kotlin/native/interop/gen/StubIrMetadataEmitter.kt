@@ -1,7 +1,9 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import kotlinx.metadata.*
+import org.jetbrains.kotlin.native.interop.indexer.preambleLines
 import org.jetbrains.kotlin.utils.addIfNotNull
+import java.io.File
 
 
 private class StubtoKm<S, M> {
@@ -15,9 +17,16 @@ private class StubtoKm<S, M> {
  */
 class StubIrMetadataEmitter(
         private val context: StubIrContext,
-        private val builderResult: StubIrBuilderResult
+        private val builderResult: StubIrBuilderResult,
+        private val bridgeBuilderResult: BridgeBuilderResult
 ) {
-    fun emit(): KmPackage {
+    fun emit(cFile: File): KmPackage {
+        context.libraryForCStubs.preambleLines.forEach {
+            cFile.appendText(it)
+        }
+        bridgeBuilderResult.nativeBridges.nativeLines.forEach {
+            cFile.appendText(it)
+        }
         return mapper.visitSimpleStubContainer(builderResult.stubs, null)
     }
 
