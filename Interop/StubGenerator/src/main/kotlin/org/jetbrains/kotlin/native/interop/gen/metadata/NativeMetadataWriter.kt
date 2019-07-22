@@ -1,6 +1,10 @@
 package org.jetbrains.kotlin.native.interop.gen.metadata
 
+import kotlinx.metadata.*
 import kotlinx.metadata.impl.PackageWriter
+import kotlinx.metadata.impl.ReadContext
+import kotlinx.metadata.impl.WriteContext
+import kotlinx.metadata.impl.extensions.*
 import org.jetbrains.kotlin.konan.CURRENT
 import org.jetbrains.kotlin.konan.KonanVersion
 import org.jetbrains.kotlin.konan.file.File
@@ -9,6 +13,7 @@ import org.jetbrains.kotlin.library.KonanLibraryVersioning
 import org.jetbrains.kotlin.library.KotlinAbiVersion
 import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.library.impl.KoltinLibraryWriterImpl
+import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.serialization.StringTableImpl
 
 /**
@@ -37,3 +42,4 @@ fun buildKlib(
     writer.addManifestAddend(manifest)
     writer.commit()
 }
+
