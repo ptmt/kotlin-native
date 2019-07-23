@@ -16,21 +16,12 @@ private class StubtoKm<S, M> {
  * Emits [kotlinx.metadata] which can be easily translated to protobuf.
  */
 class StubIrMetadataEmitter(
-        private val context: StubIrContext,
-        private val builderResult: StubIrBuilderResult,
-        private val bridgeBuilderResult: BridgeBuilderResult
+        private val builderResult: StubIrBuilderResult
 ) {
-    fun emit(cFile: File): KmPackage {
-        context.libraryForCStubs.preambleLines.forEach {
-            cFile.appendText(it)
-        }
-        bridgeBuilderResult.nativeBridges.nativeLines.forEach {
-            cFile.appendText(it)
-        }
-        return mapper.visitSimpleStubContainer(builderResult.stubs, null)
-    }
+    fun emit(): KmPackage =
+            mapper.visitSimpleStubContainer(builderResult.stubs, null)
 
-    //
+
     private val mapper = object : StubIrVisitor<StubContainer?, Any> {
         override fun visitClass(element: ClassStub, data: StubContainer?) {
         }

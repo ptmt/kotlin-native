@@ -6,138 +6,202 @@ import kotlinx.metadata.impl.WriteContext
 import kotlinx.metadata.impl.extensions.*
 import org.jetbrains.kotlin.metadata.ProtoBuf
 
+// It looks like that MetadataExtensions can be separated into several interfaces: read, write, create extensions
 class NativeMetadataExtensions : MetadataExtensions {
     override fun readClassExtensions(v: KmClassVisitor, proto: ProtoBuf.Class, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun readPackageExtensions(v: KmPackageVisitor, proto: ProtoBuf.Package, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun readFunctionExtensions(v: KmFunctionVisitor, proto: ProtoBuf.Function, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun readPropertyExtensions(v: KmPropertyVisitor, proto: ProtoBuf.Property, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun readConstructorExtensions(v: KmConstructorVisitor, proto: ProtoBuf.Constructor, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun readTypeParameterExtensions(v: KmTypeParameterVisitor, proto: ProtoBuf.TypeParameter, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun readTypeExtensions(v: KmTypeVisitor, proto: ProtoBuf.Type, c: ReadContext) {
-        TODO("not implemented")
+
     }
 
     override fun writeClassExtensions(type: KmExtensionType, proto: ProtoBuf.Class.Builder, c: WriteContext): KmClassExtensionVisitor? {
-        TODO("not implemented")
+        return object : NativeClassExtensionVisitor() {
+
+        }
     }
 
     override fun writePackageExtensions(type: KmExtensionType, proto: ProtoBuf.Package.Builder, c: WriteContext): KmPackageExtensionVisitor? {
-        TODO("not implemented")
+        return object : NativePackageExtensionVisitor() {
+
+        }
     }
 
     override fun writeFunctionExtensions(type: KmExtensionType, proto: ProtoBuf.Function.Builder, c: WriteContext): KmFunctionExtensionVisitor? {
-        TODO("not implemented")
+        return object : NativeFunctionExtensionVisitor() {
+
+        }
     }
 
     override fun writePropertyExtensions(type: KmExtensionType, proto: ProtoBuf.Property.Builder, c: WriteContext): KmPropertyExtensionVisitor? {
-        TODO("not implemented")
+        return object : NativePropertyExtensionVisitor() {
+
+        }
     }
 
     override fun writeConstructorExtensions(type: KmExtensionType, proto: ProtoBuf.Constructor.Builder, c: WriteContext): KmConstructorExtensionVisitor? {
-        TODO("not implemented")
+        return object : NativeConstructorExtensionVisitor() {
+
+        }
     }
 
     override fun writeTypeParameterExtensions(type: KmExtensionType, proto: ProtoBuf.TypeParameter.Builder, c: WriteContext): KmTypeParameterExtensionVisitor? {
-        TODO("not implemented")
+        return object : NativeTypeParameterExtensionVisitor() {
+
+        }
     }
 
     override fun writeTypeExtensions(type: KmExtensionType, proto: ProtoBuf.Type.Builder, c: WriteContext): KmTypeExtensionVisitor? {
-        TODO("not implemented")
-    }
+        return object : NativeTypeExtensionVisitor() {
 
-    override fun createClassExtension(): KmClassExtension {
-        return object : KmClassExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
-
-            override fun accept(visitor: KmClassExtensionVisitor) {
-                TODO("not implemented")
-            }
         }
     }
 
-    override fun createPackageExtension(): KmPackageExtension {
-        return object : KmPackageExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
+    override fun createClassExtension(): KmClassExtension =
+            NativeClassExtension()
 
-            override fun accept(visitor: KmPackageExtensionVisitor) {
-                TODO("not implemented")
-            }
-        }
+    override fun createPackageExtension(): KmPackageExtension =
+            NativePackageExtension()
+
+    override fun createFunctionExtension(): KmFunctionExtension =
+            NativeFunctionExtension()
+
+    override fun createPropertyExtension(): KmPropertyExtension =
+            NativePropertyExtension()
+
+    override fun createConstructorExtension(): KmConstructorExtension =
+            NativeConstructorExtension()
+
+    override fun createTypeParameterExtension(): KmTypeParameterExtension =
+            NativeTypeParameterExtension()
+
+    override fun createTypeExtension(): KmTypeExtension =
+            NativeTypeExtension()
+
+}
+
+open class NativeClassExtensionVisitor : KmClassExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
+
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativeClassExtensionVisitor::class)
     }
+}
 
-    override fun createFunctionExtension(): KmFunctionExtension {
-        return object : KmFunctionExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
+class NativeClassExtension() : NativeClassExtensionVisitor(), KmClassExtension  {
+    override fun accept(visitor: KmClassExtensionVisitor) {
 
-            override fun accept(visitor: KmFunctionExtensionVisitor) {
-                TODO("not implemented")
-            }
-        }
     }
+}
 
-    override fun createPropertyExtension(): KmPropertyExtension {
-        return object : KmPropertyExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
+open class NativePackageExtensionVisitor : KmPackageExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
 
-            override fun accept(visitor: KmPropertyExtensionVisitor) {
-                TODO("not implemented")
-            }
-        }
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativePackageExtensionVisitor::class)
     }
+}
 
-    override fun createConstructorExtension(): KmConstructorExtension {
-        return object : KmConstructorExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
+class NativePackageExtension() : NativePackageExtensionVisitor(), KmPackageExtension  {
+    override fun accept(visitor: KmPackageExtensionVisitor) {
 
-            override fun accept(visitor: KmConstructorExtensionVisitor) {
-                TODO("not implemented")
-            }
-        }
     }
+}
 
-    override fun createTypeParameterExtension(): KmTypeParameterExtension {
-        return object : KmTypeParameterExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
+open class NativeFunctionExtensionVisitor : KmFunctionExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
 
-            override fun accept(visitor: KmTypeParameterExtensionVisitor) {
-                TODO("not implemented")
-            }
-        }
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativeFunctionExtensionVisitor::class)
     }
+}
 
-    override fun createTypeExtension(): KmTypeExtension {
-        return object : KmTypeExtension {
-            override val type: KmExtensionType
-                get() = TODO("not implemented")
+class NativeFunctionExtension() : NativeFunctionExtensionVisitor(), KmFunctionExtension  {
+    override fun accept(visitor: KmFunctionExtensionVisitor) {
 
-            override fun accept(visitor: KmTypeExtensionVisitor) {
-                TODO("not implemented")
-            }
-        }
     }
+}
 
+open class NativePropertyExtensionVisitor : KmPropertyExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
+
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativePropertyExtensionVisitor::class)
+    }
+}
+
+class NativePropertyExtension() : NativePropertyExtensionVisitor(), KmPropertyExtension  {
+    override fun accept(visitor: KmPropertyExtensionVisitor) {
+
+    }
+}
+
+open class NativeConstructorExtensionVisitor : KmConstructorExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
+
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativeConstructorExtensionVisitor::class)
+    }
+}
+
+class NativeConstructorExtension() : NativeConstructorExtensionVisitor(), KmConstructorExtension  {
+    override fun accept(visitor: KmConstructorExtensionVisitor) {
+
+    }
+}
+
+open class NativeTypeParameterExtensionVisitor : KmTypeParameterExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
+
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativeTypeParameterExtensionVisitor::class)
+    }
+}
+
+class NativeTypeParameterExtension() : NativeTypeParameterExtensionVisitor(), KmTypeParameterExtension  {
+    override fun accept(visitor: KmTypeParameterExtensionVisitor) {
+
+    }
+}
+
+open class NativeTypeExtensionVisitor : KmTypeExtensionVisitor {
+    override val type: KmExtensionType
+        get() = TYPE
+
+    companion object {
+        val TYPE: KmExtensionType = KmExtensionType(NativeTypeExtensionVisitor::class)
+    }
+}
+
+class NativeTypeExtension() : NativeTypeExtensionVisitor(), KmTypeExtension  {
+    override fun accept(visitor: KmTypeExtensionVisitor) {
+
+    }
 }

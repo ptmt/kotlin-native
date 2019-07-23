@@ -14,6 +14,8 @@ import org.jetbrains.kotlin.library.KotlinAbiVersion
 import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.library.impl.KoltinLibraryWriterImpl
 import org.jetbrains.kotlin.metadata.ProtoBuf
+import org.jetbrains.kotlin.metadata.konan.KonanProtoBuf
+import org.jetbrains.kotlin.metadata.serialization.StringTable
 import org.jetbrains.kotlin.serialization.StringTableImpl
 
 /**
@@ -21,9 +23,30 @@ import org.jetbrains.kotlin.serialization.StringTableImpl
  * StubIR -> kotlinx.metadata -> protobuf -> klib
  */
 
-class NativePackageWriter : PackageWriter(StringTableImpl()) {
-    fun write(): SerializedMetadata =
-            SerializedMetadata(t.build().toByteArray(), emptyList(), emptyList())
+class NativePackageWriter(private val stringTable: StringTableImpl = StringTableImpl()) : PackageWriter(stringTable) {
+    fun write(): SerializedMetadata {
+        val libraryProto = KonanProtoBuf.LinkDataLibrary.newBuilder()
+        libraryProto.moduleName = "<hello>"
+        val fragment = buildFragment(t.build())
+        val fragmentName = "new_interop"
+        libraryProto.addPackageFragmentName("new_interop")
+        return SerializedMetadata(libraryProto.build().toByteArray(), listOf(listOf(fragment.toByteArray())), listOf(fragmentName))
+    }
+
+    private fun buildFragment(
+            packageProto: ProtoBuf.Package
+    ): KonanProtoBuf.LinkDataPackageFragment {
+        val (stringTableProto, nameTableProto) = stringTable.buildProto()
+
+        return KonanProtoBuf.LinkDataPackageFragment.newBuilder()
+                .setFqName("new_interop")
+                .setClasses(KonanProtoBuf.LinkDataClasses.newBuilder().build())
+                .setPackage(packageProto)
+                .setStringTable(stringTableProto)
+                .setNameTable(nameTableProto)
+                .setIsEmpty(false)
+                .build()
+    }
 }
 
 fun buildKlib(
@@ -36,7 +59,7 @@ fun buildKlib(
             abiVersion = KotlinAbiVersion.CURRENT,
             compilerVersion = KonanVersion.CURRENT
     )
-    val klibFile = File(outputDir, "test.klib")
+    val klibFile = File(outputDir, moduleName)
     val writer = KoltinLibraryWriterImpl(klibFile, moduleName, version)
     writer.addMetadata(metadata)
     writer.addManifestAddend(manifest)
