@@ -64,31 +64,80 @@ class NativeMetadataExtensions : MetadataExtensions {
     }
 
     override fun createClassExtension(): KmClassExtension {
-        TODO("not implemented")
+        return object : KmClassExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmClassExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
     override fun createPackageExtension(): KmPackageExtension {
-        TODO("not implemented")
+        return object : KmPackageExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmPackageExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
     override fun createFunctionExtension(): KmFunctionExtension {
-        TODO("not implemented")
+        return object : KmFunctionExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmFunctionExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
     override fun createPropertyExtension(): KmPropertyExtension {
-        TODO("not implemented")
+        return object : KmPropertyExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmPropertyExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
     override fun createConstructorExtension(): KmConstructorExtension {
-        TODO("not implemented")
+        return object : KmConstructorExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmConstructorExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
     override fun createTypeParameterExtension(): KmTypeParameterExtension {
-        TODO("not implemented")
+        return object : KmTypeParameterExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmTypeParameterExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
     override fun createTypeExtension(): KmTypeExtension {
-        TODO("not implemented")
+        return object : KmTypeExtension {
+            override val type: KmExtensionType
+                get() = TODO("not implemented")
+
+            override fun accept(visitor: KmTypeExtensionVisitor) {
+                TODO("not implemented")
+            }
+        }
     }
 
 }
