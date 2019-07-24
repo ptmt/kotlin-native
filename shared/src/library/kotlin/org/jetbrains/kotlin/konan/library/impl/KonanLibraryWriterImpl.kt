@@ -57,7 +57,6 @@ fun buildLibrary(
         manifestProperties: Properties?,
         dataFlowGraph: ByteArray?
 ): KonanLibraryLayout {
-
     val library = KonanLibraryWriterImpl(File(output), moduleName, versions, target, nopack)
 
     library.addMetadata(metadata)
