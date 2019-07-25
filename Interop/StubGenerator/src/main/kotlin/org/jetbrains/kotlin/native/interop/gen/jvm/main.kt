@@ -254,10 +254,10 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
 
     val stubIrContext = StubIrContext(logger, configuration, nativeIndex, imports, flavor, libName)
     val stubIrDriver = StubIrDriver(stubIrContext)
-    val output = if (cinteropArguments.metadata == true) {
-        InteropGenerationMode.Text(outKtFile, File(outCFile.absolutePath), entryPoint)
-    } else {
+    val output = if (cinteropArguments.metadata) {
         InteropGenerationMode.Metadata(File(outCFile.absolutePath), entryPoint)
+    } else {
+        InteropGenerationMode.Text(outKtFile, File(outCFile.absolutePath), entryPoint)
     }
     stubIrDriver.run(output)
 
