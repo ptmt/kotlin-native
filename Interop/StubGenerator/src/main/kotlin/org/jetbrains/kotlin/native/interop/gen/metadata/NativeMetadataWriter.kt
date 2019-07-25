@@ -66,20 +66,20 @@ class NativePackageWriter(
 //    }
 }
 
-fun buildInteropKlib(
-        outputDir: String,
+fun produceInteropKLib(
+        outputFilePath: String,
         metadata: SerializedMetadata,
         manifest: Properties,
         moduleName: String,
         target: KonanTarget,
-        bitcodeFile: String
+        bitcodeFilePath: String
 ) {
     val version = KonanLibraryVersioning(
             null,
             abiVersion = KotlinAbiVersion.CURRENT,
             compilerVersion = KonanVersion.CURRENT
     )
-    val klibFile = File(outputDir, moduleName)
+    val klibFile = File(outputFilePath)
 
     val repositories: List<String> = listOf("stdlib")
     val resolver = defaultResolver(repositories, target)
@@ -89,7 +89,7 @@ fun buildInteropKlib(
         addLinkDependencies(defaultLinks)
         addMetadata(metadata)
         addManifestAddend(manifest)
-        addNativeBitcode(bitcodeFile)
+        addNativeBitcode(bitcodeFilePath)
         commit()
     }
 }

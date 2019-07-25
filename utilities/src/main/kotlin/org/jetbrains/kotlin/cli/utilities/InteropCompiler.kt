@@ -62,7 +62,7 @@ fun invokeInterop(flavor: String, args: Array<String>): Array<String> {
         additionalProperties.putAll(mapOf("cstubsname" to cstubsName, "import" to imports))
     }
 
-    val cinteropArgsToCompiler = interop(flavor, args + additionalArgs, additionalProperties)
+    val cinteropArgsToCompiler = interop(flavor, args + additionalArgs, additionalProperties) ?: return null
 
     val nativeStubs = 
         if (flavor == "wasm") 
