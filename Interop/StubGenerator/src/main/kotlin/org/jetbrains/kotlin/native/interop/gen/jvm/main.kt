@@ -246,7 +246,7 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
 
     val stubIrContext = StubIrContext(logger, configuration, nativeIndex, imports, flavor, libName)
     val stubIrDriver = StubIrDriver(stubIrContext)
-    val output = StubIrOutput.Text(outKtFile, File(outCFile.absolutePath), entryPoint)
+    val output = InteropGenerationMode.Text(outKtFile, File(outCFile.absolutePath), entryPoint)
     stubIrDriver.run(output)
 
     // TODO: if a library has partially included headers, then it shouldn't be used as a dependency.
