@@ -13,8 +13,12 @@ import org.jetbrains.kotlin.library.KotlinAbiVersion
 import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.konan.KonanProtoBuf
+import org.jetbrains.kotlin.metadata.serialization.MutableTypeTable
 import org.jetbrains.kotlin.native.interop.gen.StubIrContext
 import org.jetbrains.kotlin.serialization.StringTableImpl
+import org.jetbrains.kotlin.serialization.konan.KonanMetadataVersion
+import org.jetbrains.kotlin.serialization.konan.KonanSerializerExtension
+import org.jetbrains.kotlin.serialization.konan.SourceFileMap
 
 /**
  * Idea:
@@ -25,6 +29,16 @@ class NativePackageWriter(
         private val context: StubIrContext,
         private val stringTable: StringTableImpl = StringTableImpl()
 ) : PackageWriter(stringTable) {
+
+    val sourceFileMap = SourceFileMap()
+
+    val serializerExtension = KonanSerializerExtension(
+            releaseCoroutines = true,
+            metadataVersion = KonanMetadataVersion(14),
+            sourceFileMap = sourceFileMap,
+            descriptorToIndex = { it.hashCode().toLong() }
+    )
+
     fun write(): SerializedMetadata {
         val libraryProto = KonanProtoBuf.LinkDataLibrary.newBuilder()
         libraryProto.moduleName = "<hello>"
@@ -35,6 +49,10 @@ class NativePackageWriter(
         libraryProto.addPackageFragmentName(root)
 
         val packageName = if (context.configuration.pkgName.isEmpty()) "lib" else context.createPackageName(context.configuration.pkgName)
+
+        MutableTypeTable().serialize()?.let { t.typeTable = it }
+
+        buildPackageProto(packageName, t)
         val packageFragments = listOf(buildFragment(t.build(), packageName).toByteArray())
         libraryProto.addPackageFragmentName(packageName)
 
@@ -61,9 +79,9 @@ class NativePackageWriter(
                 .build()
     }
 
-//    private fun buildPackageProto(packageFqName: String, packageProto: ProtoBuf.Package) {
-////        setExtension(protocol.packageFqName, stringTable.getPackageFqNameIndex(packageFqName))
-//    }
+    private fun buildPackageProto(packageFqName: String, proto: ProtoBuf.Package.Builder) {
+        serializerExtension.serializePackage(packageFqName, proto)
+    }
 }
 
 fun produceInteropKLib(
@@ -83,7 +101,7 @@ fun produceInteropKLib(
 
     val repositories: List<String> = listOf("stdlib")
     val resolver = defaultResolver(repositories, target)
-    val defaultLinks = resolver.defaultLinks(false, true)
+    val defaultLinks = resolver.defaultLinks(noStdLib = false, noDefaultLibs = true)
     println("Link deps: ${defaultLinks.joinToString { it.libraryName }}")
     KonanLibraryWriterImpl(klibFile, moduleName, version, target).apply {
         addLinkDependencies(defaultLinks)

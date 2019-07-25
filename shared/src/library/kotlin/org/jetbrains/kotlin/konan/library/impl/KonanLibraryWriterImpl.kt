@@ -69,6 +69,7 @@ fun buildLibrary(
         library.addIncludedBinary(it)
     }
     manifestProperties?.let { library.addManifestAddend(it) }
+    println("linkDependencies: ${linkDependencies.joinToString()}")
     library.addLinkDependencies(linkDependencies)
     dataFlowGraph?.let { library.addDataFlowGraph(it) }
 
