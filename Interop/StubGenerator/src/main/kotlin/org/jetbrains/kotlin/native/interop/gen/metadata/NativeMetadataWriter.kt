@@ -61,9 +61,9 @@ class NativePackageWriter(
                 .build()
     }
 
-    private fun buildPackageProto(packageFqName: String, packageProto: ProtoBuf.Package) {
-        setExtension(protocol.packageFqName, stringTable.getPackageFqNameIndex(packageFqName))
-    }
+//    private fun buildPackageProto(packageFqName: String, packageProto: ProtoBuf.Package) {
+////        setExtension(protocol.packageFqName, stringTable.getPackageFqNameIndex(packageFqName))
+//    }
 }
 
 fun buildInteropKlib(
