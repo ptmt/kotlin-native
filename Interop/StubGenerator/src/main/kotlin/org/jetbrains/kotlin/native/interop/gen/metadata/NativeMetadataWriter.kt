@@ -1,6 +1,7 @@
 package org.jetbrains.kotlin.native.interop.gen.metadata
 
 import kotlinx.metadata.impl.PackageWriter
+import org.jetbrains.kotlin.backend.konan.serialization.KonanStringTable
 import org.jetbrains.kotlin.konan.CURRENT
 import org.jetbrains.kotlin.konan.KonanVersion
 import org.jetbrains.kotlin.konan.file.File
@@ -14,6 +15,8 @@ import org.jetbrains.kotlin.library.SerializedMetadata
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.konan.KonanProtoBuf
 import org.jetbrains.kotlin.metadata.serialization.MutableTypeTable
+import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTable
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.native.interop.gen.StubIrContext
 import org.jetbrains.kotlin.serialization.StringTableImpl
 import org.jetbrains.kotlin.serialization.konan.KonanMetadataVersion
@@ -27,10 +30,12 @@ import org.jetbrains.kotlin.serialization.konan.SourceFileMap
 
 class NativePackageWriter(
         private val context: StubIrContext,
-        private val stringTable: StringTableImpl = StringTableImpl()
+        private val stringTable: StringTableImpl = KonanStringTable()
 ) : PackageWriter(stringTable) {
 
     val sourceFileMap = SourceFileMap()
+
+    private val versionRequirementTable: MutableVersionRequirementTable? = MutableVersionRequirementTable()
 
     val serializerExtension = KonanSerializerExtension(
             releaseCoroutines = true,
@@ -51,6 +56,11 @@ class NativePackageWriter(
         val packageName = if (context.configuration.pkgName.isEmpty()) "lib" else context.createPackageName(context.configuration.pkgName)
 
         MutableTypeTable().serialize()?.let { t.typeTable = it }
+
+        val versionRequirementTableProto = versionRequirementTable?.serialize()
+        if (versionRequirementTableProto != null) {
+            t.versionRequirementTable = versionRequirementTableProto
+        }
 
         buildPackageProto(packageName, t)
         val packageFragments = listOf(buildFragment(t.build(), packageName).toByteArray())
@@ -80,7 +90,7 @@ class NativePackageWriter(
     }
 
     private fun buildPackageProto(packageFqName: String, proto: ProtoBuf.Package.Builder) {
-        serializerExtension.serializePackage(packageFqName, proto)
+        serializerExtension.serializePackage(FqName(packageFqName), proto)
     }
 }
 
