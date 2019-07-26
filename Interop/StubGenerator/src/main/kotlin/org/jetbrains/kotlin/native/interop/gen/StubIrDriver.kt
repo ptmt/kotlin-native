@@ -137,7 +137,7 @@ class StubIrDriver(private val context: StubIrContext) {
                 }
             }
             is InteropGenerationMode.Metadata -> {
-                val kmPackage = StubIrMetadataEmitter(builderResult, bridgeBuilderResult).emit()
+                val kmPackage = StubIrMetadataEmitter(builderResult).emit()
                 val packageWriter = NativePackageWriter(context)
                 kmPackage.accept(packageWriter)
                 mode.output = packageWriter.write()

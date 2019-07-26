@@ -1,26 +1,17 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import kotlinx.metadata.*
+import org.jetbrains.kotlin.native.interop.gen.metadata.annotations
 import org.jetbrains.kotlin.utils.addIfNotNull
-
-
-private class StubtoKm<S, M> {
-    private val map = mutableMapOf<S, M>()
-
-    fun getOrPut(stub: S, valueProducer: () -> M) = map.getOrPut(stub, valueProducer)
-}
 
 /**
  * Emits [kotlinx.metadata] which can be easily translated to protobuf.
  */
 class StubIrMetadataEmitter(
-        private val builderResult: StubIrBuilderResult,
-        private val bridgeBuilderResult: BridgeBuilderResult
+        private val builderResult: StubIrBuilderResult
 ) {
     fun emit(): KmPackage =
             mapper.visitSimpleStubContainer(builderResult.stubs, null)
-
-    private val ktFile = bridgeBuilderResult.kotlinFile
 
     private val mapper = object : StubIrVisitor<StubContainer?, Any> {
         override fun visitClass(element: ClassStub, data: StubContainer?) {
@@ -38,6 +29,7 @@ class StubIrMetadataEmitter(
                 returnType = element.returnType.map()
                 valueParameters += element.parameters.map { mapValueParameter(it) }
                 typeParameters += element.typeParameters.map { mapTypeParameter(it) }
+                annotations += element.annotations.map { mapAnnotation(it) }
             }
 
         override fun visitProperty(element: PropertyStub, data: StubContainer?) {
@@ -76,20 +68,20 @@ class StubIrMetadataEmitter(
         private fun StubType.map(): KmType = when (this) {
             is WrapperStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    val fqName = this@map.kotlinType.classifier.fqName.replace('.', '/')
+                    val fqName = this@map.kotlinType.classifier.fqName.convertFqName()
                     classifier = KmClassifier.Class(fqName)
                 }
             }
             is ClassifierStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    val fqName = this@map.classifier.fqName.replace('.', '/')
+                    val fqName = this@map.classifier.fqName.convertFqName()
                     classifier = KmClassifier.Class(fqName)
                     arguments += this@map.typeArguments.map { mapTypeArgument(it) }
                 }
             }
             is RuntimeStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    classifier = KmClassifier.Class(this@map.fqName)
+                    classifier = KmClassifier.Class(this@map.fqName.convertFqName())
                 }
             }
             is TypeParameterStubType -> {
@@ -99,10 +91,12 @@ class StubIrMetadataEmitter(
             }
             is NestedStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    classifier = KmClassifier.Class(this@map.fqName)
+                    classifier = KmClassifier.Class(this@map.fqName.convertFqName())
                 }
             }
         }
+
+        private fun String.convertFqName() = replace('.', '/')
 
         private fun FunctionStub.getFlags(): Array<Flag> = listOfNotNull(
                 Flag.Common.IS_PUBLIC,
@@ -130,8 +124,12 @@ class StubIrMetadataEmitter(
 
                 }
 
-        private fun mapTypeArgument(typeArgumentStub: TypeArgumentStub): KmTypeProjection =
-                KmTypeProjection(KmVariance.INVARIANT, typeArgumentStub.type.map())
+        private fun mapTypeArgument(typeArgumentStub: TypeArgument): KmTypeProjection = when (typeArgumentStub) {
+            is TypeArgumentStub -> KmTypeProjection(KmVariance.INVARIANT, typeArgumentStub.type.map())
+            is TypeArgumentStub.StarProjection -> KmTypeProjection.STAR
+            else -> error("Unexpected type projection: $typeArgumentStub")
+        }
+
 
         private fun mapTypeParameter(typeParameterStub: TypeParameterStub): KmTypeParameter =
                 KmTypeParameter(
@@ -142,5 +140,32 @@ class StubIrMetadataEmitter(
                 ).apply {
                     upperBounds.addIfNotNull(typeParameterStub.upperBound?.map())
                 }
+
+        private fun mapAnnotation(annotationStub: AnnotationStub): KmAnnotation = when (annotationStub) {
+            AnnotationStub.ObjC.ConsumesReceiver -> TODO()
+            AnnotationStub.ObjC.ReturnsRetained -> TODO()
+            is AnnotationStub.ObjC.Method -> TODO()
+            is AnnotationStub.ObjC.Factory -> TODO()
+            AnnotationStub.ObjC.Consumed -> TODO()
+            is AnnotationStub.ObjC.Constructor -> TODO()
+            is AnnotationStub.ObjC.ExternalClass -> TODO()
+            AnnotationStub.CCall.CString -> TODO()
+            AnnotationStub.CCall.WCString -> TODO()
+            is AnnotationStub.CCall.Symbol ->
+                KmAnnotation(
+                        "kotlinx/cinterop/internal/CCall",
+                        mapOf(
+                              "id" to KmAnnotationArgument.StringValue(annotationStub.symbolName)
+                        )
+                )
+            is AnnotationStub.CCall.GetMemberAt -> TODO()
+            is AnnotationStub.CCall.SetMemberAt -> TODO()
+            is AnnotationStub.CStruct -> TODO()
+            is AnnotationStub.CNaturalStruct -> TODO()
+            is AnnotationStub.CLength -> TODO()
+            is AnnotationStub.Deprecated -> TODO()
+            is AnnotationStub.ReadBits -> TODO()
+            is AnnotationStub.WriteBits -> TODO()
+        }
     }
 }

@@ -374,12 +374,11 @@ internal class FunctionStubBuilder(
             }
         }
 
-        val returnType = WrapperStubType(if (func.returnsVoid()) {
-            KotlinTypes.unit
+        val returnType = if (func.returnsVoid()) {
+            KotlinTypes.unit.toStubType()
         } else {
-            context.mirror(func.returnType).argType
-        })
-
+            context.mirror(func.returnType).argType.toStubType()
+        }
 
         val annotations: List<AnnotationStub>
         val mustBeExternal: Boolean

@@ -16,12 +16,8 @@ import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.konan.KonanProtoBuf
 import org.jetbrains.kotlin.metadata.serialization.MutableTypeTable
 import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTable
-import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.native.interop.gen.StubIrContext
 import org.jetbrains.kotlin.serialization.StringTableImpl
-import org.jetbrains.kotlin.serialization.konan.KonanMetadataVersion
-import org.jetbrains.kotlin.serialization.konan.KonanSerializerExtension
-import org.jetbrains.kotlin.serialization.konan.SourceFileMap
 
 /**
  * Idea:
@@ -33,25 +29,16 @@ class NativePackageWriter(
         private val stringTable: StringTableImpl = KonanStringTable()
 ) : PackageWriter(stringTable) {
 
-    val sourceFileMap = SourceFileMap()
-
     private val versionRequirementTable: MutableVersionRequirementTable? = MutableVersionRequirementTable()
-
-    val serializerExtension = KonanSerializerExtension(
-            releaseCoroutines = true,
-            metadataVersion = KonanMetadataVersion(14),
-            sourceFileMap = sourceFileMap,
-            descriptorToIndex = { it.hashCode().toLong() }
-    )
 
     fun write(): SerializedMetadata {
         val libraryProto = KonanProtoBuf.LinkDataLibrary.newBuilder()
         libraryProto.moduleName = "<hello>"
 
         // empty root
-        val root = ""
-        val rootFragments = listOf(buildFragment(null, "").toByteArray())
-        libraryProto.addPackageFragmentName(root)
+//        val root = ""
+//        val rootFragments = listOf(buildFragment(null, "").toByteArray())
+//        libraryProto.addPackageFragmentName(root)
 
         val packageName = if (context.configuration.pkgName.isEmpty()) "lib" else context.createPackageName(context.configuration.pkgName)
 
@@ -62,12 +49,11 @@ class NativePackageWriter(
             t.versionRequirementTable = versionRequirementTableProto
         }
 
-        buildPackageProto(packageName, t)
         val packageFragments = listOf(buildFragment(t.build(), packageName).toByteArray())
         libraryProto.addPackageFragmentName(packageName)
 
-        val packages = listOf(rootFragments, packageFragments)
-        val packageNames = listOf(root, packageName)
+        val packages = listOf(packageFragments)
+        val packageNames = listOf(packageName)
 
         val libraryProtoBytes = libraryProto.build().toByteArray()
         return SerializedMetadata(libraryProtoBytes, packages, packageNames)
@@ -89,9 +75,6 @@ class NativePackageWriter(
                 .build()
     }
 
-    private fun buildPackageProto(packageFqName: String, proto: ProtoBuf.Package.Builder) {
-        serializerExtension.serializePackage(FqName(packageFqName), proto)
-    }
 }
 
 fun produceInteropKLib(

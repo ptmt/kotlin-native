@@ -4,7 +4,9 @@ import kotlinx.metadata.*
 import kotlinx.metadata.impl.ReadContext
 import kotlinx.metadata.impl.WriteContext
 import kotlinx.metadata.impl.extensions.*
+import kotlinx.metadata.impl.writeAnnotation
 import org.jetbrains.kotlin.metadata.ProtoBuf
+import org.jetbrains.kotlin.metadata.konan.KonanProtoBuf
 
 // It looks like that MetadataExtensions can be separated into several interfaces: read, write, create extensions
 class NativeMetadataExtensions : MetadataExtensions {
@@ -43,14 +45,21 @@ class NativeMetadataExtensions : MetadataExtensions {
     }
 
     override fun writePackageExtensions(type: KmExtensionType, proto: ProtoBuf.Package.Builder, c: WriteContext): KmPackageExtensionVisitor? {
+        if (type != NativePackageExtensionVisitor.TYPE) return null
         return object : NativePackageExtensionVisitor() {
-
+            override fun visitPackageFqName(fqName: String) {
+                // TODO: use [org.jetbrains.kotlin.serialization.StringTableImpl.getPackageFqNameIndex]
+                proto.setExtension(KonanProtoBuf.packageFqName, c[fqName])
+            }
         }
     }
 
     override fun writeFunctionExtensions(type: KmExtensionType, proto: ProtoBuf.Function.Builder, c: WriteContext): KmFunctionExtensionVisitor? {
+        if (type != NativeFunctionExtensionVisitor.TYPE) return null
         return object : NativeFunctionExtensionVisitor() {
-
+            override fun visitAnnotation(annotation: KmAnnotation) {
+                proto.addExtension(KonanProtoBuf.functionAnnotation, annotation.writeAnnotation(c.strings).build())
+            }
         }
     }
 
@@ -116,35 +125,78 @@ class NativeClassExtension() : NativeClassExtensionVisitor(), KmClassExtension  
     }
 }
 
-open class NativePackageExtensionVisitor : KmPackageExtensionVisitor {
+
+
+
+
+abstract class NativePackageExtensionVisitor : KmPackageExtensionVisitor {
     override val type: KmExtensionType
         get() = TYPE
 
     companion object {
         val TYPE: KmExtensionType = KmExtensionType(NativePackageExtensionVisitor::class)
     }
+
+    abstract fun visitPackageFqName(fqName: String)
 }
 
-class NativePackageExtension() : NativePackageExtensionVisitor(), KmPackageExtension  {
+class NativePackageExtension : NativePackageExtensionVisitor(), KmPackageExtension {
+
+    var packageFqName: String? = null
+
     override fun accept(visitor: KmPackageExtensionVisitor) {
 
     }
+
+    override fun visitPackageFqName(fqName: String) {
+        packageFqName = fqName
+    }
 }
 
-open class NativeFunctionExtensionVisitor : KmFunctionExtensionVisitor {
+val KmPackage.nativeExtensions: NativePackageExtension
+    get() = visitExtensions(NativePackageExtensionVisitor.TYPE) as NativePackageExtension
+
+var KmPackage.packageFqName: String?
+    get() = nativeExtensions.packageFqName
+    set(value) { nativeExtensions.packageFqName = value }
+
+
+
+
+abstract class NativeFunctionExtensionVisitor : KmFunctionExtensionVisitor {
     override val type: KmExtensionType
         get() = TYPE
 
     companion object {
         val TYPE: KmExtensionType = KmExtensionType(NativeFunctionExtensionVisitor::class)
     }
+
+    abstract fun visitAnnotation(annotation: KmAnnotation)
 }
 
-class NativeFunctionExtension() : NativeFunctionExtensionVisitor(), KmFunctionExtension  {
+class NativeFunctionExtension() : NativeFunctionExtensionVisitor(), KmFunctionExtension {
+
+    val annotations: MutableList<KmAnnotation> = mutableListOf()
+
+    override fun visitAnnotation(annotation: KmAnnotation) {
+        annotations += annotation
+    }
+
     override fun accept(visitor: KmFunctionExtensionVisitor) {
+        require(visitor is NativeFunctionExtensionVisitor)
+        annotations.forEach(visitor::visitAnnotation)
 
     }
 }
+
+val KmFunction.nativeExtensions: NativeFunctionExtension
+    get() = visitExtensions(NativeFunctionExtensionVisitor.TYPE) as NativeFunctionExtension
+
+val KmFunction.annotations: MutableList<KmAnnotation>
+    get() = nativeExtensions.annotations
+
+
+
 
 open class NativePropertyExtensionVisitor : KmPropertyExtensionVisitor {
     override val type: KmExtensionType

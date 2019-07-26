@@ -64,11 +64,16 @@ class TypeParameterStub(
 
 }
 
+interface TypeArgument
+
 // Add variance if needed
-class TypeArgumentStub(val type: StubType)
+class TypeArgumentStub(val type: StubType) : TypeArgument {
+    object StarProjection : TypeArgument
+}
 
 /**
  * Wrapper over [KotlinType].
+ * TODO: It's better to get rid of [KotlinType at all]
  */
 class WrapperStubType(
         val kotlinType: KotlinType
@@ -86,7 +91,7 @@ class WrapperStubType(
  */
 class ClassifierStubType(
         val classifier: Classifier,
-        val typeArguments: List<TypeArgumentStub> = emptyList(),
+        val typeArguments: List<TypeArgument> = emptyList(),
         override val nullable: Boolean = false
 ) : StubType()
 
@@ -103,7 +108,7 @@ class RuntimeStubType(
 }
 
 /**
- * Type that is tested in another type declaration.
+ * Type that is nested in another type declaration.
  * TODO: Rethink.
  */
 class NestedStubType(
@@ -125,7 +130,9 @@ class NestedStubType(
 class TypeParameterStubType(
         val name: String,
         override val nullable: Boolean = false
-) : StubType()
+) : StubType() {
+
+}
 
 /**
  * Represents a source of StubIr element.
@@ -166,6 +173,8 @@ interface AnnotationHolder {
     val annotations: List<AnnotationStub>
 }
 
+// TODO: Should annotations have fqName?
+//  Or even all elements of StubIr?
 sealed class AnnotationStub {
     sealed class ObjC : AnnotationStub() {
         object ConsumesReceiver : ObjC()
@@ -368,7 +377,7 @@ sealed class PropertyAccessor : FunctionalStub {
 
         class MemberAt(
                 val offset: Long,
-                val typeArguments: List<TypeArgumentStub> = emptyList(),
+                val typeArguments: List<TypeArgument> = emptyList(),
                 val isPassedByValue: Boolean
         ) : Getter() {
             override val annotations: List<AnnotationStub> = emptyList()
@@ -403,7 +412,7 @@ sealed class PropertyAccessor : FunctionalStub {
         class MemberAt(
                 val offset: Long,
                 override val annotations: List<AnnotationStub> = emptyList(),
-                val typeArguments: List<TypeArgumentStub> = emptyList()
+                val typeArguments: List<TypeArgument> = emptyList()
         ) : Setter()
 
         class WriteBits(

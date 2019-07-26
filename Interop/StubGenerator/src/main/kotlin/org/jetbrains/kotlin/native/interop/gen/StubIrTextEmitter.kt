@@ -630,8 +630,14 @@ class StubIrTextEmitter(
         }
     }
 
-    private fun renderTypeArguments(typeArguments: List<TypeArgumentStub>) = if (typeArguments.isNotEmpty()) {
-        typeArguments.joinToString(", ", "<", ">") { renderStubType(it.type) }
+    private fun renderTypeArguments(typeArguments: List<TypeArgument>) = if (typeArguments.isNotEmpty()) {
+        typeArguments.joinToString(", ", "<", ">") {
+            when (it) {
+                is TypeArgumentStub -> renderStubType(it.type)
+                is TypeArgumentStub.StarProjection -> "*"
+                else -> error("Unexpected type argument kind: $it")
+            }
+        }
     } else {
         ""
     }
