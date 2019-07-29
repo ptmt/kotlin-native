@@ -180,7 +180,7 @@ class StubIrTextEmitter(
 
         override fun visitTypealias(element: TypealiasStub, owner: StubContainer?) {
             val alias = renderClassifierDeclaration(element.alias.classifier) + renderTypeArguments(element.alias.typeArguments)
-            val aliasee = renderStubType(element.aliasee)
+            val aliasee = renderStubType(element.underLyingType)
             out("typealias $alias = $aliasee")
         }
 
@@ -449,6 +449,7 @@ class StubIrTextEmitter(
         is RuntimeStubType -> stubType.name + if (stubType.nullable) "?" else ""
         is TypeParameterStubType -> stubType.name + if (stubType.nullable) "?" else ""
         is NestedStubType -> stubType.name + if (stubType.nullable) "?" else ""
+        is AbbreviationStubType -> renderStubType(stubType.abbreviatedType) + if (stubType.nullable) "?" else ""
     }
 
     private fun renderValueUsage(value: ValueStub): String = when (value) {

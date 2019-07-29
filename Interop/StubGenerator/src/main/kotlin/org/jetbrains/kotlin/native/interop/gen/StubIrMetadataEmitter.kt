@@ -1,24 +1,34 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import kotlinx.metadata.*
+import org.jetbrains.kotlin.backend.konan.serialization.KonanStringTable
+import org.jetbrains.kotlin.metadata.serialization.Interner
+import org.jetbrains.kotlin.metadata.serialization.MutableTypeTable
 import org.jetbrains.kotlin.native.interop.gen.metadata.annotations
+import org.jetbrains.kotlin.serialization.StringTableImpl
 import org.jetbrains.kotlin.utils.addIfNotNull
 
 /**
  * Emits [kotlinx.metadata] which can be easily translated to protobuf.
  */
 class StubIrMetadataEmitter(
-        private val builderResult: StubIrBuilderResult
+        private val builderResult: StubIrBuilderResult,
+        private val typeTable: MutableTypeTable,
+        private val stringTable: StringTableImpl
 ) {
     fun emit(): KmPackage =
             mapper.visitSimpleStubContainer(builderResult.stubs, null)
+
+    private val _typeParameterInterner = Interner<TypeParameterStub>()
+
+    private val typeParameterInterner: Interner<TypeParameterStub>
+            get() = _typeParameterInterner
 
     private val mapper = object : StubIrVisitor<StubContainer?, Any> {
         override fun visitClass(element: ClassStub, data: StubContainer?) {
         }
 
         override fun visitTypealias(element: TypealiasStub, data: StubContainer?) {
-
         }
 
         override fun visitFunction(element: FunctionStub, data: StubContainer?): KmFunction =
@@ -68,35 +78,42 @@ class StubIrMetadataEmitter(
         private fun StubType.map(): KmType = when (this) {
             is WrapperStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    val fqName = this@map.kotlinType.classifier.fqName.convertFqName()
+                    val fqName = this@map.kotlinType.classifier.fqName.serializedForm()
                     classifier = KmClassifier.Class(fqName)
                 }
             }
             is ClassifierStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    val fqName = this@map.classifier.fqName.convertFqName()
+                    val fqName = this@map.classifier.fqName.serializedForm()
                     classifier = KmClassifier.Class(fqName)
                     arguments += this@map.typeArguments.map { mapTypeArgument(it) }
                 }
             }
             is RuntimeStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    classifier = KmClassifier.Class(this@map.fqName.convertFqName())
+                    classifier = KmClassifier.Class(this@map.fqName.serializedForm())
                 }
             }
             is TypeParameterStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    classifier = KmClassifier.TypeParameter(id = 0)
+                    classifier = KmClassifier.TypeParameter(id = typeParameterInterner.intern(this@map.source))
                 }
             }
             is NestedStubType -> {
                 KmType(flags = flagsOf(*getFlags())).apply {
-                    classifier = KmClassifier.Class(this@map.fqName.convertFqName())
+                    classifier = KmClassifier.Class(this@map.fqName.serializedForm())
+                }
+            }
+            is AbbreviationStubType -> {
+                KmType(flags = flagsOf(*getFlags())).apply {
+                    abbreviatedType = this@map.abbreviatedType.map()
+                    classifier = KmClassifier.Class(this@map.classifierStubType.classifier.fqName.serializedForm())
+                    arguments += this@map.classifierStubType.typeArguments.map { mapTypeArgument(it) }
                 }
             }
         }
 
-        private fun String.convertFqName() = replace('.', '/')
+        private fun String.serializedForm() = replace('.', '/')
 
         private fun FunctionStub.getFlags(): Array<Flag> = listOfNotNull(
                 Flag.Common.IS_PUBLIC,
@@ -125,7 +142,9 @@ class StubIrMetadataEmitter(
                 }
 
         private fun mapTypeArgument(typeArgumentStub: TypeArgument): KmTypeProjection = when (typeArgumentStub) {
-            is TypeArgumentStub -> KmTypeProjection(KmVariance.INVARIANT, typeArgumentStub.type.map())
+            is TypeArgumentStub -> KmTypeProjection(KmVariance.INVARIANT, typeArgumentStub.type.map()).apply {
+
+            }
             is TypeArgumentStub.StarProjection -> KmTypeProjection.STAR
             else -> error("Unexpected type projection: $typeArgumentStub")
         }
@@ -135,7 +154,7 @@ class StubIrMetadataEmitter(
                 KmTypeParameter(
                         flags = 0,
                         name = typeParameterStub.name,
-                        id = 0,
+                        id = typeParameterId(typeParameterStub),
                         variance = KmVariance.INVARIANT
                 ).apply {
                     upperBounds.addIfNotNull(typeParameterStub.upperBound?.map())
@@ -168,4 +187,7 @@ class StubIrMetadataEmitter(
             is AnnotationStub.WriteBits -> TODO()
         }
     }
+
+    private fun typeParameterId(typeParameter: TypeParameterStub): Int =
+        typeParameterInterner.intern(typeParameter)
 }

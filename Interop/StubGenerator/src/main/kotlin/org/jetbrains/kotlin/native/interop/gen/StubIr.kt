@@ -60,7 +60,7 @@ class TypeParameterStub(
         val upperBound: StubType? = null
 ) {
     fun asType(nullable: Boolean): StubType =
-            TypeParameterStubType(name, nullable = nullable)
+            TypeParameterStubType(name, this, nullable = nullable)
 
 }
 
@@ -68,12 +68,18 @@ interface TypeArgument
 
 // Add variance if needed
 class TypeArgumentStub(val type: StubType) : TypeArgument {
-    object StarProjection : TypeArgument
+    object StarProjection : TypeArgument {
+        override fun toString(): String =
+                "STAR_PROJ"
+    }
+
+    override fun toString(): String =
+            "TypeArgument($type)"
 }
 
 /**
  * Wrapper over [KotlinType].
- * TODO: It's better to get rid of [KotlinType at all]
+ * TODO: It's better to get rid of [KotlinType]  at all.
  */
 class WrapperStubType(
         val kotlinType: KotlinType
@@ -93,11 +99,23 @@ class ClassifierStubType(
         val classifier: Classifier,
         val typeArguments: List<TypeArgument> = emptyList(),
         override val nullable: Boolean = false
-) : StubType()
+) : StubType() {
+    override fun toString(): String =
+            "ClassifierStubType(fqName = ${classifier.fqName}, typeArguments = ${typeArguments.joinToString { it.toString() }})"
+}
 
+/**
+ *
+ */
+class AbbreviationStubType(
+    val abbreviatedType: StubType,
+    val classifierStubType: ClassifierStubType,
+    override val nullable: Boolean = false
+) : StubType()
 
 /**
  * Type that is belongs to [kotlinx.cinterop].
+ * TODO: Remove.
  */
 class RuntimeStubType(
         val name: String,
@@ -129,10 +147,9 @@ class NestedStubType(
  */
 class TypeParameterStubType(
         val name: String,
+        val source: TypeParameterStub,
         override val nullable: Boolean = false
-) : StubType() {
-
-}
+) : StubType()
 
 /**
  * Represents a source of StubIr element.
@@ -464,7 +481,7 @@ class EnumEntryStub(
 
 class TypealiasStub(
         val alias: ClassifierStubType,
-        val aliasee: StubType
+        val underLyingType: StubType
 ) : StubIrElement {
 
     override fun <T, R> accept(visitor: StubIrVisitor<T, R>, data: T) =

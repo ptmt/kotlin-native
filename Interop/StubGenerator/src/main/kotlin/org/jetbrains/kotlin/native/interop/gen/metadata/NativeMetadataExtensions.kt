@@ -172,11 +172,13 @@ abstract class NativeFunctionExtensionVisitor : KmFunctionExtensionVisitor {
     }
 
     abstract fun visitAnnotation(annotation: KmAnnotation)
+
 }
 
 class NativeFunctionExtension() : NativeFunctionExtensionVisitor(), KmFunctionExtension {
 
     val annotations: MutableList<KmAnnotation> = mutableListOf()
+    var returnType: Int = 0
 
     override fun visitAnnotation(annotation: KmAnnotation) {
         annotations += annotation
@@ -252,7 +254,8 @@ open class NativeTypeExtensionVisitor : KmTypeExtensionVisitor {
     }
 }
 
-class NativeTypeExtension() : NativeTypeExtensionVisitor(), KmTypeExtension  {
+class NativeTypeExtension() : NativeTypeExtensionVisitor(), KmTypeExtension {
+
     override fun accept(visitor: KmTypeExtensionVisitor) {
 
     }
