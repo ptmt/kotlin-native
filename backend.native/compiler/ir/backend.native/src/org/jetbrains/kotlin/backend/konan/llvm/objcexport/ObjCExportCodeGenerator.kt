@@ -460,16 +460,23 @@ private fun ObjCExportCodeGenerator.emitBoxConverter(
     setObjCExportTypeInfo(boxClass, constPointer(converter))
 }
 
+private class FunctionClass(val irClass: IrClass, val arity: Int)
+
+private fun Context.findAllReferencedFunctionClasses(): List<FunctionClass> =
+        ir.symbols.functionIrClassFactory.builtClasses
+                .filter { it.name.asString().startsWith("Function") }
+                .map { FunctionClass(it, it.name.asString().substring("Function".length).toInt()) }
+
 private fun ObjCExportCodeGenerator.emitFunctionConverters() {
-    (0 .. ObjCExportMapper.maxFunctionTypeParameterCount).forEach { numberOfParameters ->
-        val converter = kotlinFunctionToBlockConverter(BlockPointerBridge(numberOfParameters, returnsVoid = false))
-        setObjCExportTypeInfo(symbols.functions[numberOfParameters].owner, constPointer(converter))
+    context.findAllReferencedFunctionClasses().forEach { functionClass ->
+        val converter = kotlinFunctionToBlockConverter(BlockPointerBridge(functionClass.arity, returnsVoid = false))
+        setObjCExportTypeInfo(functionClass.irClass, constPointer(converter))
     }
 }
 
 private fun ObjCExportCodeGenerator.emitBlockToKotlinFunctionConverters() {
-    val converters = (0 .. ObjCExportMapper.maxFunctionTypeParameterCount).map {
-        val bridge = BlockPointerBridge(numberOfParameters = it, returnsVoid = false)
+    val converters = context.findAllReferencedFunctionClasses().map {
+        val bridge = BlockPointerBridge(numberOfParameters = it.arity, returnsVoid = false)
         constPointer(blockToKotlinFunctionConverter(bridge))
     }
     val ptr = staticData.placeGlobalArray(
