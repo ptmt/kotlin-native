@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.*
 import org.jetbrains.kotlin.backend.konan.ir.*
 import org.jetbrains.kotlin.backend.konan.llvm.coverage.LLVMCoverageInstrumentation
+import org.jetbrains.kotlin.backend.konan.lower.InlinerExpressionLocationHint
 import org.jetbrains.kotlin.backend.konan.optimizations.DataFlowIR
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.builtins.UnsignedType
@@ -276,6 +277,33 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         }
     }
 
+    private fun <R> usingBy(irFunction: IrFunction, block: () -> R): R? {
+        val oldCodeContext = currentCodeContext
+
+        try {
+            if ((currentCodeContext as? FunctionScope)?.declaration == irFunction
+                    || (currentCodeContext as? ReturnableBlockScope)?.returnableBlock?.inlineFunctionSymbol?.owner == irFunction)
+                return block()
+            currentCodeContext = (currentCodeContext as? InnerScope)?.outerContext ?: return null
+            return usingBy(irFunction, block)
+        } finally {
+            currentCodeContext = oldCodeContext
+        }
+    }
+
+    private fun <R> usingBy(irFile: IrFile, block: () -> R): R? {
+        val oldCodeContext = currentCodeContext
+
+        try {
+            if ((currentCodeContext as? FileScope)?.file == irFile
+                    || (currentCodeContext as? ReturnableBlockScope)?.file == irFile)
+                return block()
+            currentCodeContext = (currentCodeContext as? InnerScope)?.outerContext ?: return null
+            return usingBy(irFile, block)
+        } finally {
+            currentCodeContext = oldCodeContext
+        }
+    }
     private fun appendCAdapters() {
         context.cAdapterGenerator.generateBindings(codegen)
     }
@@ -1197,7 +1225,16 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun generateVariable(variable: IrVariable) {
         context.log{"generateVariable               : ${ir2string(variable)}"}
-        val value = variable.initializer?.let { evaluateExpression(it) }
+        val value = variable.initializer?.let {
+            val callSiteOrigin = (it as? IrBlock)?.origin as? InlinerExpressionLocationHint
+            callSiteOrigin?.run {
+                usingBy(callSiteSymbol.owner.file) {
+                    usingBy(callSiteSymbol.owner) {
+                        evaluateExpression(it)
+                    }
+                }
+            } ?: evaluateExpression(it)
+        }
         currentCodeContext.genDeclareVariable(
                 variable, value, debugInfoIfNeeded(
                 (currentCodeContext.functionScope() as FunctionScope).declaration, variable))

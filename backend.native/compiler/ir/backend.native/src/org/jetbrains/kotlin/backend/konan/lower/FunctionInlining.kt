@@ -452,8 +452,11 @@ internal class FunctionInlining(val context: Context) : IrElementTransformerVoid
                     return@forEach
                 }
 
+                val variableInitializer = it.argumentExpression.transform(substitutor, data = null)
                 val newVariable = currentScope.scope.createTemporaryVariableWithWrappedDescriptor(  // Create new variable and init it with the parameter expression.
-                        irExpression = it.argumentExpression.transform(substitutor, data = null),   // Arguments may reference the previous ones - substitute them.
+                        irExpression = IrBlockImpl (variableInitializer.startOffset, variableInitializer.endOffset, variableInitializer.type, InlinerExpressionLocationHint(callSite.symbol)).apply{
+                            statements.add(variableInitializer)
+                        },   // Arguments may reference the previous ones - substitute them.
                         nameHint = callee.symbol.owner.name.toString(),
                         isMutable = false)
 
@@ -482,4 +485,8 @@ internal class FunctionInlining(val context: Context) : IrElementTransformerVoid
         fun withLocation(startOffset: Int, endOffset: Int) =
                 IrGetValueImpl(startOffset, endOffset, type, symbol, origin)
     }
+}
+
+class InlinerExpressionLocationHint(val callSiteSymbol: IrFunctionSymbol) : IrStatementOrigin {
+    override fun toString(): String = "(${this.javaClass.simpleName} : ${callSiteSymbol.owner.name} @${callSiteSymbol.owner.file.fileEntry.name})"
 }
