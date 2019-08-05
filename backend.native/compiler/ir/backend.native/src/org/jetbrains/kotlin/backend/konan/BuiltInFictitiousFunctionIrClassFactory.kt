@@ -28,14 +28,14 @@ import org.jetbrains.kotlin.ir.util.NaiveSourceBasedFileEntryImpl
 import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.util.OperatorNameConventions
 
 internal object DECLARATION_ORIGIN_FUNCTION_CLASS : IrDeclarationOriginImpl("DECLARATION_ORIGIN_FUNCTION_CLASS")
 
 internal class BuiltInFictitiousFunctionIrClassFactory(
         var symbolTable: SymbolTable?,
-        val irBuiltIns: IrBuiltIns
+        private val irBuiltIns: IrBuiltIns,
+        private val reflectionTypes: KonanReflectionTypes
 ) : IrProvider {
 
     override fun getDeclaration(symbol: IrSymbol) =
@@ -51,31 +51,31 @@ internal class BuiltInFictitiousFunctionIrClassFactory(
             value.files += filesMap.values
         }
 
-    fun function(n: Int) = buildClass(irBuiltIns.builtIns.builtInsModule.findClassAcrossModuleDependencies(
-            ClassId.topLevel(FqName("kotlin.Function$n"))) as FunctionClassDescriptor)
+    class FunctionalInterface(val irClass: IrClass, val arity: Int)
 
-    fun kFunction(n: Int) = buildClass(irBuiltIns.builtIns.builtInsModule.findClassAcrossModuleDependencies(
-            ClassId.topLevel(FqName("kotlin.reflect.KFunction$n"))) as FunctionClassDescriptor)
-
-    fun suspendFunction(n: Int) = buildClass(irBuiltIns.builtIns.builtInsModule.findClassAcrossModuleDependencies(
-            ClassId.topLevel(FqName("kotlin.coroutines.SuspendFunction$n"))) as FunctionClassDescriptor)
-
-    fun kSuspendFunction(n: Int) = buildClass(irBuiltIns.builtIns.builtInsModule.findClassAcrossModuleDependencies(
-            ClassId.topLevel(FqName("kotlin.reflect.KSuspendFunction$n"))) as FunctionClassDescriptor)
+    fun function(n: Int) = buildClass(irBuiltIns.builtIns.getFunction(n) as FunctionClassDescriptor)
+    fun kFunction(n: Int) = buildClass(reflectionTypes.getKFunction(n) as FunctionClassDescriptor)
+    fun suspendFunction(n: Int) = buildClass(irBuiltIns.builtIns.getSuspendFunction(n) as FunctionClassDescriptor)
+    fun kSuspendFunction(n: Int) = buildClass(reflectionTypes.getKSuspendFunction(n) as FunctionClassDescriptor)
 
     private val functionSymbol = symbolTable!!.referenceClass(
             irBuiltIns.builtIns.builtInsModule.findClassAcrossModuleDependencies(
-                    ClassId.topLevel(FqName("kotlin.Function")))!!)
+                    ClassId.topLevel(KonanFqNames.function))!!)
 
     private val kFunctionSymbol = symbolTable!!.referenceClass(
             irBuiltIns.builtIns.builtInsModule.findClassAcrossModuleDependencies(
-                    ClassId.topLevel(FqName("kotlin.reflect.KFunction")))!!)
+                    ClassId.topLevel(KonanFqNames.kFunction))!!)
 
     private val filesMap = mutableMapOf<PackageFragmentDescriptor, IrFile>()
 
     private val builtClassesMap = mutableMapOf<FunctionClassDescriptor, IrClass>()
 
     val builtClasses get() = builtClassesMap.values
+
+    val builtFunctionNClasses get() =
+        builtClassesMap.values
+                .filter { (it.descriptor as FunctionClassDescriptor).functionKind == FunctionClassDescriptor.Kind.Function }
+                .map { FunctionalInterface(it, (it.descriptor as FunctionClassDescriptor).arity) }
 
     private fun createTypeParameter(descriptor: TypeParameterDescriptor) =
             symbolTable?.declareGlobalTypeParameter(

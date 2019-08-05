@@ -460,22 +460,15 @@ private fun ObjCExportCodeGenerator.emitBoxConverter(
     setObjCExportTypeInfo(boxClass, constPointer(converter))
 }
 
-private class FunctionClass(val irClass: IrClass, val arity: Int)
-
-private fun Context.findAllReferencedFunctionClasses(): List<FunctionClass> =
-        ir.symbols.functionIrClassFactory.builtClasses
-                .filter { it.name.asString().startsWith("Function") }
-                .map { FunctionClass(it, it.name.asString().substring("Function".length).toInt()) }
-
 private fun ObjCExportCodeGenerator.emitFunctionConverters() {
-    context.findAllReferencedFunctionClasses().forEach { functionClass ->
+    context.ir.symbols.functionIrClassFactory.builtFunctionNClasses.forEach { functionClass ->
         val converter = kotlinFunctionToBlockConverter(BlockPointerBridge(functionClass.arity, returnsVoid = false))
         setObjCExportTypeInfo(functionClass.irClass, constPointer(converter))
     }
 }
 
 private fun ObjCExportCodeGenerator.emitBlockToKotlinFunctionConverters() {
-    val converters = context.findAllReferencedFunctionClasses().map {
+    val converters = context.ir.symbols.functionIrClassFactory.builtFunctionNClasses.map {
         val bridge = BlockPointerBridge(numberOfParameters = it.arity, returnsVoid = false)
         constPointer(blockToKotlinFunctionConverter(bridge))
     }
