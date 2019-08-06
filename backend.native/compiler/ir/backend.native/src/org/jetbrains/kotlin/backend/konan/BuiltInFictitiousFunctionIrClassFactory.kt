@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrClassSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
@@ -143,22 +144,36 @@ internal class BuiltInFictitiousFunctionIrClassFactory(
 
                     val invokeFunctionDescriptor = descriptor.unsubstitutedMemberScope.getContributedFunctions(
                             OperatorNameConventions.INVOKE, NoLookupLocation.FROM_BACKEND).single()
-                    if (invokeFunctionDescriptor.kind != CallableMemberDescriptor.Kind.FAKE_OVERRIDE) {
-                        declarations += createSimpleFunction(
-                                invokeFunctionDescriptor, DECLARATION_ORIGIN_FUNCTION_CLASS,
-                                typeParameters.last().defaultType
-                        ).apply {
-                            parent = functionClass
-                            invokeFunctionDescriptor.valueParameters.mapTo(valueParameters) {
-                                IrValueParameterImpl(
-                                        SYNTHETIC_OFFSET, SYNTHETIC_OFFSET,
-                                        DECLARATION_ORIGIN_FUNCTION_CLASS,
-                                        it,
-                                        functionClass.typeParameters[it.index].defaultType,
-                                        null
-                                ).also { it.parent = this }
-                            }
-                            createDispatchReceiverParameter(DECLARATION_ORIGIN_FUNCTION_CLASS)
+                    val isFakeOverride = invokeFunctionDescriptor.kind == CallableMemberDescriptor.Kind.FAKE_OVERRIDE
+                    val invokeFunctionOrigin =
+                            if (isFakeOverride)
+                                IrDeclarationOrigin.FAKE_OVERRIDE
+                            else
+                                DECLARATION_ORIGIN_FUNCTION_CLASS
+                    declarations += createSimpleFunction(
+                            invokeFunctionDescriptor, invokeFunctionOrigin,
+                            typeParameters.last().defaultType
+                    ).apply {
+                        parent = functionClass
+                        invokeFunctionDescriptor.valueParameters.mapTo(valueParameters) {
+                            IrValueParameterImpl(
+                                    SYNTHETIC_OFFSET, SYNTHETIC_OFFSET,
+                                    invokeFunctionOrigin,
+                                    it,
+                                    functionClass.typeParameters[it.index].defaultType,
+                                    null
+                            ).also { it.parent = this }
+                        }
+                        if (!isFakeOverride)
+                            createDispatchReceiverParameter(invokeFunctionOrigin)
+                        else {
+                            val overriddenFunction = superTypes
+                                    .mapNotNull { it.classOrNull?.owner }
+                                    .single { it.descriptor is FunctionClassDescriptor }
+                                    .simpleFunctions()
+                                    .single { it.name == OperatorNameConventions.INVOKE }
+                            overriddenSymbols += overriddenFunction.symbol
+                            dispatchReceiverParameter = overriddenFunction.dispatchReceiverParameter?.copyTo(this)
                         }
                     }
                     // Unfortunately, addFakeOverrides() uses some parents but they are only set after PsiToIr phase.
